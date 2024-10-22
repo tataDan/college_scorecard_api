@@ -16,7 +16,6 @@ class FilterResults {
         filteredResults.add(result);
       }
     }
-
     return filteredResults;
   }
 
@@ -27,21 +26,24 @@ class FilterResults {
     String? gradStudentsMaxStr = '';
     String? inStateTuitionMaxStr = '';
     String? outOfStateTuitionMaxStr = '';
-    int studentSizeMinNum = 0;
-    int studentSizeMaxNum = 0;
-    int gradStudentsMinNum = 0;
-    int gradStudentsMaxNum = 0;
-    int inStateTuitionMaxNum = 0;
-    int outOfStateTuitionMaxNum = 0;
+    int? studentSizeMinNum = 0;
+    int? studentSizeMaxNum = 0;
+    int? gradStudentsMinNum = 0;
+    int? gradStudentsMaxNum = 0;
+    int? inStateTuitionMaxNum = 0;
+    int? outOfStateTuitionMaxNum = 0;
 
     studentSizeMinStr = resultsFilters['studentSizeMin'];
     if (studentSizeMinStr!.isNotEmpty) {
-      studentSizeMinNum = int.parse(studentSizeMinStr);
+      studentSizeMinNum = int.tryParse(studentSizeMinStr);
+      if (studentSizeMinNum == null) {}
     }
+
     studentSizeMaxStr = resultsFilters['studentSizeMax'];
     if (studentSizeMaxStr!.isNotEmpty) {
-      studentSizeMaxNum = int.parse(studentSizeMaxStr);
+      studentSizeMaxNum = int.tryParse(studentSizeMaxStr);
     }
+
     gradStudentsMinStr = resultsFilters['gradStudentsMin'];
     if (gradStudentsMinStr!.isNotEmpty) {
       gradStudentsMinNum = int.parse(gradStudentsMinStr);
@@ -60,9 +62,9 @@ class FilterResults {
     }
 
     bool studentSizeMinFiltered =
-        ((studentSizeMinNum > 0) && (result.studentSize < studentSizeMinNum));
+        ((studentSizeMinNum! > 0) && (result.studentSize < studentSizeMinNum));
     bool studentSizeMaxFiltered =
-        ((studentSizeMaxNum > 0) && (result.studentSize > studentSizeMaxNum));
+        ((studentSizeMaxNum! > 0) && (result.studentSize > studentSizeMaxNum));
     bool gradStudentsMinFiltered = ((gradStudentsMinNum > 0) &&
         (result.studentGradStudents < gradStudentsMinNum));
     bool gradStudentsMaxFiltered = ((gradStudentsMaxNum > 0) &&

@@ -20,9 +20,10 @@ class _DocumentsPageState extends State<DocumentsPage> {
   final Map<String, String> _resultsFilters = {};
   int? _page;
   int schoolCountBase = 1;
-
   Map<int, int> pageCounts = {};
   Map<int, int> pageCountsFiltered = {};
+  int previousPage = 0;
+  final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _studentSizeMinController =
       TextEditingController();
@@ -37,6 +38,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
   final TextEditingController _outOfStateTuitionMaxController =
       TextEditingController();
   bool filtersApplied = false;
+  bool filtersChanged = false;
 
   @override
   void dispose() {
@@ -54,9 +56,13 @@ class _DocumentsPageState extends State<DocumentsPage> {
     final collegeScorecardCubit = context.read<CollegeScorecardCubit>();
 
     _searchValues = context.watch<SearchValuesCubit>().state.searchValues;
+    if (_page != null) {
+      previousPage = _page!;
+    }
     _page = context.watch<PageCubit>().state.page;
-
-    collegeScorecardCubit.fetchCollegeScorecard(_searchValues!, _page!);
+    if (!filtersApplied || _page != previousPage) {
+      collegeScorecardCubit.fetchCollegeScorecard(_searchValues!, _page!);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -145,7 +151,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
           ),
           const SizedBox(width: 10.0),
           ElevatedButton(
-            onPressed: _page! >= (total ~/ perPage)
+            onPressed: _page! >= (total / perPage) - 1
                 ? null
                 : () {
                     BlocProvider.of<PageCubit>(context).increment();
@@ -173,10 +179,53 @@ class _DocumentsPageState extends State<DocumentsPage> {
           ),
           const SizedBox(width: 20.0),
           Text(
-            'Schools found: ${total.toString()}',
+            'Schools found: ${total.toString()} (before filtering)',
             style: const TextStyle(fontSize: 16),
           ),
+          const SizedBox(width: 10.0),
+          ElevatedButton(
+            onPressed: () {
+              context.read<PageCubit>().resetToZero();
+              schoolCountBase = 1;
+            },
+            child: const Text('Go to first page'),
+          ),
         ],
+      ),
+    );
+  }
+
+  String? validateFilter(String? value) {
+    final RegExp filterRegex = RegExp(r'^[0-9]+$');
+    if (value!.isNotEmpty && !filterRegex.hasMatch(value)) {
+      return 'Numeric digits only';
+    }
+    return null;
+  }
+
+  SizedBox textFieldWithFocus(
+      {required double width,
+      required TextEditingController controller,
+      required String labelText}) {
+    return SizedBox(
+      width: width,
+      child: Focus(
+        onFocusChange: (hasFocus) {
+          if (!hasFocus) {
+            setState(() {
+              filtersChanged = true;
+            });
+          }
+        },
+        child: TextFormField(
+          controller: controller,
+          validator: validateFilter,
+          decoration: InputDecoration(
+            labelText: labelText,
+            border: const OutlineInputBorder(),
+          ),
+          enabled: _page! == 0 ? true : false,
+        ),
       ),
     );
   }
@@ -184,147 +233,134 @@ class _DocumentsPageState extends State<DocumentsPage> {
   Padding showFilters() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            children: [
-              const Text(
-                'Filters:',
-                style: TextStyle(fontSize: 18.0),
-              ),
-              const SizedBox(width: 17.0),
-              SizedBox(
-                width: 160.0,
-                child: TextField(
-                  controller: _studentSizeMinController,
-                  decoration: const InputDecoration(
-                    labelText: 'Min Student Size',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              children: [
+                const Text(
+                  'Filters:',
+                  style: TextStyle(fontSize: 18.0),
                 ),
-              ),
-              const SizedBox(width: 17.0),
-              SizedBox(
-                width: 160.0,
-                child: TextField(
-                  controller: _studentSizeMaxController,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Student Size',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
+                const SizedBox(width: 17.0),
+                textFieldWithFocus(
+                    width: 160.0,
+                    controller: _studentSizeMinController,
+                    labelText: 'Min Student Size'),
+                const SizedBox(width: 17.0),
+                textFieldWithFocus(
+                    width: 160.0,
+                    controller: _studentSizeMaxController,
+                    labelText: 'Max Student Size'),
+                const SizedBox(width: 17.0),
+                textFieldWithFocus(
+                    width: 170.0,
+                    controller: _gradStudentsMinController,
+                    labelText: 'Min Grad Students'),
+                const SizedBox(width: 10.0),
+                Text(
+                  filtersChanged ? 'Filters need to be applied' : '',
+                  style: const TextStyle(fontSize: 16.0, color: Colors.red),
                 ),
-              ),
-              const SizedBox(width: 17.0),
-              SizedBox(
-                width: 170.0,
-                child: TextField(
-                  controller: _gradStudentsMinController,
-                  decoration: const InputDecoration(
-                    labelText: 'Min Grad Students',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10.0),
-          Wrap(
-            children: [
-              SizedBox(
-                width: 170.0,
-                child: TextField(
-                  controller: _gradStudentsMaxController,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Grad Students',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
-                ),
-              ),
-              const SizedBox(width: 17.0),
-              SizedBox(
-                width: 175.0,
-                child: TextField(
-                  controller: _inStateTuitionMaxController,
-                  decoration: const InputDecoration(
-                    labelText: 'Max In-state Tuition',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
-                ),
-              ),
-              const SizedBox(width: 17.0),
-              SizedBox(
-                width: 210.0,
-                child: TextField(
-                  controller: _outOfStateTuitionMaxController,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Out-of-state Tuition',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: _page! == 0 ? true : false,
-                ),
-              ),
-              const SizedBox(width: 15.0),
-              ElevatedButton(
-                onPressed: _page! == 0
-                    ? () {
-                        if (_studentSizeMinController.text.trim().isNotEmpty) {
-                          _resultsFilters['studentSizeMin'] =
-                              _studentSizeMinController.text.trim();
-                        } else {
-                          _resultsFilters['studentSizeMin'] = '';
+              ],
+            ),
+            const SizedBox(height: 10.0),
+            Wrap(
+              children: [
+                textFieldWithFocus(
+                    width: 170.0,
+                    controller: _gradStudentsMaxController,
+                    labelText: 'Max Grad Students'),
+                const SizedBox(width: 17.0),
+                textFieldWithFocus(
+                    width: 175.0,
+                    controller: _inStateTuitionMaxController,
+                    labelText: 'Max In-state Tuition'),
+                const SizedBox(width: 17.0),
+                textFieldWithFocus(
+                    width: 210.0,
+                    controller: _outOfStateTuitionMaxController,
+                    labelText: 'Max Out-of-state Tuition'),
+                const SizedBox(width: 15.0),
+                ElevatedButton(
+                  onPressed: _page! == 0
+                      ? () {
+                          if (_formKey.currentState!.validate()) {
+                            filtersChanged = false;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Applying filters')),
+                            );
+                            if (_studentSizeMinController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['studentSizeMin'] =
+                                  _studentSizeMinController.text.trim();
+                            } else {
+                              _resultsFilters['studentSizeMin'] = '';
+                            }
+                            if (_studentSizeMaxController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['studentSizeMax'] =
+                                  _studentSizeMaxController.text.trim();
+                            } else {
+                              _resultsFilters['studentSizeMax'] = '';
+                            }
+                            if (_gradStudentsMinController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['gradStudentsMin'] =
+                                  _gradStudentsMinController.text.trim();
+                            } else {
+                              _resultsFilters['gradStudentsMin'] = '';
+                            }
+                            if (_gradStudentsMaxController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['gradStudentsMax'] =
+                                  _gradStudentsMaxController.text.trim();
+                            } else {
+                              _resultsFilters['gradStudentsMax'] = '';
+                            }
+                            if (_inStateTuitionMaxController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['inStateTuitionMax'] =
+                                  _inStateTuitionMaxController.text.trim();
+                            } else {
+                              _resultsFilters['inStateTuitionMax'] = '';
+                            }
+                            if (_outOfStateTuitionMaxController.text
+                                .trim()
+                                .isNotEmpty) {
+                              _resultsFilters['outOfStateTuitionMax'] =
+                                  _outOfStateTuitionMaxController.text.trim();
+                            } else {
+                              _resultsFilters['outOfStateTuitionMax'] = '';
+                            }
+                            setState(() {
+                              filtersApplied = true;
+                            });
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Please enter only numeric digits.'),
+                              ),
+                            );
+                          }
                         }
-                        if (_studentSizeMaxController.text.trim().isNotEmpty) {
-                          _resultsFilters['studentSizeMax'] =
-                              _studentSizeMaxController.text.trim();
-                        } else {
-                          _resultsFilters['studentSizeMax'] = '';
-                        }
-                        if (_gradStudentsMinController.text.trim().isNotEmpty) {
-                          _resultsFilters['gradStudentsMin'] =
-                              _gradStudentsMinController.text.trim();
-                        } else {
-                          _resultsFilters['gradStudentsMin'] = '';
-                        }
-                        if (_gradStudentsMaxController.text.trim().isNotEmpty) {
-                          _resultsFilters['gradStudentsMax'] =
-                              _gradStudentsMaxController.text.trim();
-                        } else {
-                          _resultsFilters['gradStudentsMax'] = '';
-                        }
-                        if (_inStateTuitionMaxController.text
-                            .trim()
-                            .isNotEmpty) {
-                          _resultsFilters['inStateTuitionMax'] =
-                              _inStateTuitionMaxController.text.trim();
-                        } else {
-                          _resultsFilters['inStateTuitionMax'] = '';
-                        }
-                        if (_outOfStateTuitionMaxController.text
-                            .trim()
-                            .isNotEmpty) {
-                          _resultsFilters['outOfStateTuitionMax'] =
-                              _outOfStateTuitionMaxController.text.trim();
-                        } else {
-                          _resultsFilters['outOfStateTuitionMax'] = '';
-                        }
-                        setState(() {
-                          filtersApplied = true;
-                        });
-                      }
-                    : null,
-                child: const Text(
-                  'Apply Filters',
+                      : null,
+                  child: const Text(
+                    'Apply Filters',
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -521,26 +557,32 @@ class _DocumentsPageState extends State<DocumentsPage> {
           ),
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: cipPrograms!.isNotEmpty &&
-                          !_searchValues!
-                              .containsKey('latest.programs.cip_4_digit.code')
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProgramsListPage(
-                                cipPrograms: cipPrograms!,
-                                schoolName: schoolName!,
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: const Text('Show programs list for this school'),
+              if (cipPrograms!.isNotEmpty &&
+                  _searchValues!
+                      .containsKey('latest.programs.cip_4_digit.code'))
+                Expanded(
+                  child: Text(
+                      'School offers searched for program:: ${results[index].cipPrograms!.first.title}'),
                 ),
-              ),
+              if (cipPrograms.isNotEmpty &&
+                  !_searchValues!
+                      .containsKey('latest.programs.cip_4_digit.code'))
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProgramsListPage(
+                            cipPrograms: cipPrograms!,
+                            schoolName: schoolName!,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Show programs list for this school'),
+                  ),
+                ),
             ],
           ),
         ],

@@ -40,6 +40,7 @@ dependencies:
   bloc: ^8.1.4
   flutter_bloc: ^8.1.6
   url_launcher: ^6.3.0
+  sprintf: ^7.0.0
 
 dev_dependencies:
   flutter_test:
