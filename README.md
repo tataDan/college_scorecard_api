@@ -22,7 +22,7 @@ To run and build the application in release mode you can enter a command such as
 
 To build the application in release mode you can enter a command such as this: `flutter build windows --dart-define=COLLEGE_SCORECARD_API_KEY=YOUR API KEY GOES HERE`, replacing "YOUR KEY API GOES HERE" with your API key.
 
-If you are using Visual Studio Code and you want to use the `<F5>` key ("Start Debugging") or the the `<Ctl> <F5>` key combination ("Run without Debugging), then you can create a ".vscode" folder between the "college-scorecard-api" folder and the "college_scorecard_api" folder and then place a "launch.json" file into that folder.  This file should like similar to this:
+If you are using Visual Studio Code and you want to use the `<F5>` key ("Start Debugging") or the the `<Ctl> <F5>` key combination ("Run without Debugging), then you can create a ".vscode" folder at the top level and then place a "launch.json" file into that folder.  This file should like similar to this:
 
 `{
     "version": "0.1.0",
@@ -31,7 +31,7 @@ If you are using Visual Studio Code and you want to use the `<F5>` key ("Start D
             "name": "Production",
             "request": "launch",
             "type": "dart",
-            "program": "college_scorecard_api/lib/main.dart",
+            "program": "lib/main.dart",
             "args": [
                 "--dart-define=COLLEGE_SCORECARD_API_KEY=YOUR API KEY GOES HERE"
             ]
